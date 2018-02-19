@@ -85,3 +85,141 @@ cosWorksProperly =
             in
             cos valueInInterval |> expectValueIn (Interval.cos interval)
         )
+
+
+containingValues : Test
+containingValues =
+    Test.fuzz (Fuzz.list Fuzz.float)
+        "containing"
+        (\values ->
+            case Interval.containingValues values of
+                Just interval ->
+                    interval
+                        |> Expect.all
+                            (List.map
+                                (\value ->
+                                    \interval -> expectValueIn interval value
+                                )
+                                values
+                            )
+
+                Nothing ->
+                    values |> Expect.equal []
+        )
+
+
+hull : Test
+hull =
+    Test.describe "hull"
+        [ Test.fuzz3
+            fuzzer
+            fuzzer
+            (Fuzz.floatRange 0 1)
+            "Value in first interval is in hull"
+            (\firstInterval secondInterval t ->
+                Interval.interpolate firstInterval t
+                    |> expectValueIn
+                        (Interval.hull firstInterval secondInterval)
+            )
+        , Test.fuzz3
+            fuzzer
+            fuzzer
+            (Fuzz.floatRange 0 1)
+            "Value in second interval is in hull"
+            (\firstInterval secondInterval t ->
+                Interval.interpolate secondInterval t
+                    |> expectValueIn
+                        (Interval.hull firstInterval secondInterval)
+            )
+        ]
+
+
+expectDistinct : Interval -> Interval -> Expectation
+expectDistinct firstInterval secondInterval =
+    if
+        (Interval.minValue firstInterval > Interval.maxValue secondInterval)
+            || (Interval.maxValue firstInterval < Interval.minValue secondInterval)
+    then
+        Expect.pass
+    else
+        Expect.fail <|
+            "Intervals "
+                ++ endpointsString firstInterval
+                ++ " and "
+                ++ endpointsString secondInterval
+                ++ " are not distinct"
+
+
+intersection : Test
+intersection =
+    Test.fuzz3
+        fuzzer
+        fuzzer
+        (Fuzz.floatRange 0 1)
+        "Value in intersection is in both intervals"
+        (\firstInterval secondInterval t ->
+            case Interval.intersection firstInterval secondInterval of
+                Just intersectionInterval ->
+                    Interval.interpolate intersectionInterval t
+                        |> Expect.all
+                            [ expectValueIn firstInterval
+                            , expectValueIn secondInterval
+                            ]
+
+                Nothing ->
+                    expectDistinct firstInterval secondInterval
+        )
+
+
+expectContainedIn : Interval -> Interval -> Expectation
+expectContainedIn firstInterval secondInterval =
+    if Interval.isContainedIn firstInterval secondInterval then
+        Expect.pass
+    else
+        Expect.fail <|
+            "Interval "
+                ++ endpointsString secondInterval
+                ++ " is not contained in "
+                ++ endpointsString firstInterval
+
+
+aggregate : Test
+aggregate =
+    Test.fuzz (Fuzz.list fuzzer)
+        "aggregate"
+        (\intervals ->
+            case Interval.aggregate intervals of
+                Just aggregateInterval ->
+                    aggregateInterval
+                        |> Expect.all
+                            (List.map
+                                (\interval ->
+                                    \aggregateInterval ->
+                                        interval
+                                            |> expectContainedIn
+                                                aggregateInterval
+                                )
+                                intervals
+                            )
+
+                Nothing ->
+                    intervals |> Expect.equal []
+        )
+
+
+intersectsAndIntersectionAreConsistent : Test
+intersectsAndIntersectionAreConsistent =
+    Test.fuzz2
+        fuzzer
+        fuzzer
+        "intersects and intersection are consistent"
+        (\firstInterval secondInterval ->
+            let
+                intersects =
+                    Interval.intersects firstInterval secondInterval
+
+                intersection =
+                    Interval.intersection firstInterval secondInterval
+            in
+            intersects |> Expect.equal (intersection /= Nothing)
+        )
