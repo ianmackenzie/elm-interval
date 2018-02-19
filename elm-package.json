@@ -7,7 +7,11 @@
         "src",
         "../elm-float-extra/src"
     ],
-    "exposed-modules": [],
+    "exposed-modules": [
+        "Interval",
+        "Interval.Encode",
+        "Interval.Decode"
+    ],
     "dependencies": {
         "elm-lang/core": "5.0.0 <= v < 6.0.0"
     },
