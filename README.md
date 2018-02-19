@@ -8,6 +8,9 @@ intervals:
 unitInterval =
     Interval.from 0 1
 
+Interval.endpoints unitInterval
+--> ( 0, 1 )
+
 Interval.containingValues [ 2, 1, 3 ]
 --> Just (Interval.from 1 3)
 
