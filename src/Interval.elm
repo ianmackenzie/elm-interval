@@ -314,6 +314,15 @@ greater than 1.0 can be used to extrapolate.
     Interval.interpolate (Interval.from -1 5) -0.5
     --> -4
 
+Note that the interpolation is in fact from the minimum value to the maximum,
+_not_ "from the first `Interval.from` argument to the second":
+
+    Interval.interpolate (Interval.from 0 10) 0.2
+    --> 2
+
+    Interval.interpolate (Interval.from 10 0) 0.2
+    --> 2 -- not 8!
+
 -}
 interpolate : Interval -> Float -> Float
 interpolate interval t =
