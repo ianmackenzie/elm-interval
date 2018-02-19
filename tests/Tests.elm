@@ -18,6 +18,15 @@ fuzzer =
     Fuzz.map2 Interval.from endpoint endpoint
 
 
+endpointsString : Interval -> String
+endpointsString interval =
+    let
+        ( minValue, maxValue ) =
+            Interval.endpoints interval
+    in
+    "[" ++ toString minValue ++ "," ++ toString maxValue ++ "]"
+
+
 expectValueIn : Interval -> Float -> Expectation
 expectValueIn interval value =
     let
@@ -32,11 +41,8 @@ expectValueIn interval value =
     else
         Expect.fail
             (toString value
-                ++ " is not contained in the interval ["
-                ++ toString minValue
-                ++ ","
-                ++ toString maxValue
-                ++ "]"
+                ++ " is not contained in the interval "
+                ++ endpointsString interval
             )
 
 
