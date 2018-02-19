@@ -11,10 +11,20 @@ unitInterval =
 Interval.containingValues [ 2, 1, 3 ]
 --> Just (Interval.from 1 3)
 
+Interval.hull
+    (Interval.from 1 2)
+    (Interval.from 3 5)
+--> Interval.from 1 5
+
 Interval.intersection
     (Interval.from 1 3)
     (Interval.from 2 5)
 --> Just (Interval.from 2 3)
+
+Interval.intersection
+    (Interval.from 1 2)
+    (Interval.from 3 5)
+--> Nothing
 
 Interval.contains 0 (Interval.from -1 3)
 --> True
