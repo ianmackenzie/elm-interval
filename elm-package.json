@@ -7,9 +7,7 @@
         "src"
     ],
     "exposed-modules": [
-        "Interval",
-        "Interval.Encode",
-        "Interval.Decode"
+        "Interval"
     ],
     "dependencies": {
         "elm-lang/core": "5.0.0 <= v < 6.0.0",
