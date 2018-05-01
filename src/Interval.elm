@@ -16,6 +16,7 @@ module Interval
         , maxValue
         , midpoint
         , minValue
+        , parameter
         , sin
         , singleton
         , unit
@@ -44,7 +45,7 @@ module Interval
 
 # Interpolation
 
-@docs interpolate
+@docs interpolate, parameter
 
 
 # Arithmetic
@@ -348,6 +349,24 @@ interpolate interval t =
             endpoints interval
     in
     Float.interpolateFrom minValue maxValue t
+
+
+{-| -}
+parameter : Interval -> Float -> Float
+parameter interval value =
+    let
+        ( minValue, maxValue ) =
+            endpoints interval
+    in
+    if minValue < maxValue then
+        (value - minValue) / (maxValue - minValue)
+    else if value < minValue then
+        -1 / 0
+    else if value > maxValue then
+        1 / 0
+    else
+        -- value, minValue and maxValue are all equal
+        0
 
 
 {-| Check if an interval contains a given value.
