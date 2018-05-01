@@ -18,12 +18,18 @@ module Interval
         , minValue
         , sin
         , singleton
+        , unit
         , width
         )
 
 {-|
 
 @docs Interval
+
+
+# Constants
+
+@docs unit
 
 
 # Constructors
@@ -60,6 +66,17 @@ example the interval from 3 to 5.
 -}
 type Interval
     = Interval ( Float, Float )
+
+
+{-| The unit interval, from 0 to 1.
+
+    Interval.unit
+    --> Interval.from 0 1
+
+-}
+unit : Interval
+unit =
+    from 0 1
 
 
 {-| Construct a zero-width interval containing a single value.
