@@ -108,13 +108,13 @@ necessary to ensure a valid interval is returned:
 
 -}
 fromEndpoints : ( Float, Float ) -> Interval
-fromEndpoints endpoints =
+fromEndpoints endpoints_ =
     let
         ( firstValue, secondValue ) =
-            endpoints
+            endpoints_
     in
     if firstValue <= secondValue then
-        Interval endpoints
+        Interval endpoints_
     else
         Interval ( secondValue, firstValue )
 
@@ -209,14 +209,14 @@ intersection firstInterval secondInterval =
         ( min2, max2 ) =
             endpoints secondInterval
 
-        minValue =
+        minValue_ =
             max min1 min2
 
-        maxValue =
+        maxValue_ =
             min max1 max2
     in
-    if minValue <= maxValue then
-        Just (Interval ( minValue, maxValue ))
+    if minValue_ <= maxValue_ then
+        Just (Interval ( minValue_, maxValue_ ))
     else
         Nothing
 
@@ -262,8 +262,8 @@ is equivalent to (but more efficient than)
 
 -}
 endpoints : Interval -> ( Float, Float )
-endpoints (Interval endpoints) =
-    endpoints
+endpoints (Interval endpoints_) =
+    endpoints_
 
 
 {-| Get the minimum value of an interval.
@@ -297,10 +297,10 @@ maxValue interval =
 midpoint : Interval -> Float
 midpoint interval =
     let
-        ( minValue, maxValue ) =
+        ( minValue_, maxValue_ ) =
             endpoints interval
     in
-    minValue + 0.5 * (maxValue - minValue)
+    minValue_ + 0.5 * (maxValue_ - minValue_)
 
 
 {-| Get the width of an interval.
@@ -312,10 +312,10 @@ midpoint interval =
 width : Interval -> Float
 width interval =
     let
-        ( minValue, maxValue ) =
+        ( minValue_, maxValue_ ) =
             endpoints interval
     in
-    maxValue - minValue
+    maxValue_ - minValue_
 
 
 {-| Interpolate between an interval's endpoints; a value of 0.0 corresponds to
@@ -345,27 +345,27 @@ _not_ "from the first `Interval.from` argument to the second":
 interpolate : Interval -> Float -> Float
 interpolate interval t =
     let
-        ( minValue, maxValue ) =
+        ( minValue_, maxValue_ ) =
             endpoints interval
     in
-    Float.interpolateFrom minValue maxValue t
+    Float.interpolateFrom minValue_ maxValue_ t
 
 
 {-| -}
 parameter : Interval -> Float -> Float
 parameter interval value =
     let
-        ( minValue, maxValue ) =
+        ( minValue_, maxValue_ ) =
             endpoints interval
     in
-    if minValue < maxValue then
-        (value - minValue) / (maxValue - minValue)
-    else if value < minValue then
+    if minValue_ < maxValue_ then
+        (value - minValue_) / (maxValue_ - minValue_)
+    else if value < minValue_ then
         -1 / 0
-    else if value > maxValue then
+    else if value > maxValue_ then
         1 / 0
     else
-        -- value, minValue and maxValue are all equal
+        -- value, minValue_ and maxValue_ are all equal
         0
 
 
@@ -388,10 +388,10 @@ your code is vulnerable to numerical roundoff!
 contains : Float -> Interval -> Bool
 contains value interval =
     let
-        ( minValue, maxValue ) =
+        ( minValue_, maxValue_ ) =
             endpoints interval
     in
-    minValue <= value && value <= maxValue
+    minValue_ <= value && value <= maxValue_
 
 
 {-| Check if two intervals touch or overlap (have any values in common).
@@ -471,10 +471,10 @@ same).
 isSingleton : Interval -> Bool
 isSingleton interval =
     let
-        ( minValue, maxValue ) =
+        ( minValue_, maxValue_ ) =
             endpoints interval
     in
-    minValue == maxValue
+    minValue_ == maxValue_
 
 
 {-| Add the given amount to both endpoints of the given interval.
@@ -486,10 +486,10 @@ isSingleton interval =
 shiftBy : Float -> Interval -> Interval
 shiftBy delta interval =
     let
-        ( minValue, maxValue ) =
+        ( minValue_, maxValue_ ) =
             endpoints interval
     in
-    Interval ( minValue + delta, maxValue + delta )
+    Interval ( minValue_ + delta, maxValue_ + delta )
 
 
 {-| Get the image of sin(x) applied on the interval.
@@ -510,20 +510,20 @@ sin interval =
             ( includesMin, includesMax ) =
                 sinIncludesMinMax interval
 
-            ( minValue, maxValue ) =
+            ( minValue_, maxValue_ ) =
                 endpoints interval
 
             newMin =
                 if includesMin then
                     -1
                 else
-                    min (Basics.sin minValue) (Basics.sin maxValue)
+                    min (Basics.sin minValue_) (Basics.sin maxValue_)
 
             newMax =
                 if includesMax then
                     1
                 else
-                    max (Basics.sin minValue) (Basics.sin maxValue)
+                    max (Basics.sin minValue_) (Basics.sin maxValue_)
         in
         fromEndpoints ( newMin, newMax )
 
@@ -546,20 +546,20 @@ cos interval =
             ( includesMin, includesMax ) =
                 cosIncludesMinMax interval
 
-            ( minValue, maxValue ) =
+            ( minValue_, maxValue_ ) =
                 endpoints interval
 
             newMin =
                 if includesMin then
                     -1
                 else
-                    min (Basics.cos minValue) (Basics.cos maxValue)
+                    min (Basics.cos minValue_) (Basics.cos maxValue_)
 
             newMax =
                 if includesMax then
                     1
                 else
-                    max (Basics.cos minValue) (Basics.cos maxValue)
+                    max (Basics.cos minValue_) (Basics.cos maxValue_)
         in
         fromEndpoints ( newMin, newMax )
 
@@ -591,13 +591,13 @@ If `minValue` and `maxValue` are in different branches
 cosIncludesMax : Interval -> Bool
 cosIncludesMax interval =
     let
-        ( minValue, maxValue ) =
+        ( minValue_, maxValue_ ) =
             endpoints interval
 
         minBranch =
-            floor <| minValue / (2 * pi)
+            floor <| minValue_ / (2 * pi)
 
         maxBranch =
-            floor <| maxValue / (2 * pi)
+            floor <| maxValue_ / (2 * pi)
     in
     minBranch /= maxBranch
