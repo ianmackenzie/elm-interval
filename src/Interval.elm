@@ -16,21 +16,14 @@ module Interval
         , maxValue
         , midpoint
         , minValue
-        , parameter
         , sin
         , singleton
-        , unit
         , width
         )
 
 {-|
 
 @docs Interval
-
-
-# Constants
-
-@docs unit
 
 
 # Constructors
@@ -45,7 +38,7 @@ module Interval
 
 # Interpolation
 
-@docs interpolate, parameter
+@docs interpolate
 
 
 # Arithmetic
@@ -351,7 +344,6 @@ interpolate interval t =
     Float.interpolateFrom minValue_ maxValue_ t
 
 
-{-| -}
 parameter : Interval -> Float -> Float
 parameter interval value =
     let
