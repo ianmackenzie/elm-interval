@@ -362,8 +362,7 @@ parameter interval value =
     --> False
 
 The minimum and maximum values of an interval are considered to be contained in
-the interval, although if you are relying on this then there is a good chance
-your code is vulnerable to numerical roundoff!
+the interval:
 
     Interval.contains 3 (Interval.from -1 3)
     --> True
@@ -395,9 +394,6 @@ intersection of two just-touching intervals):
     Interval.from -5 5
         |> Interval.intersects (Interval.from 5 10)
     --> True
-
-As with `contains`, though, if you are relying on this then there is a good
-chance your code is vulnerable to numerical roundoff!
 
 -}
 intersects : Interval number -> Interval number -> Bool
