@@ -1,15 +1,25 @@
-module Tests exposing (..)
+module Tests exposing
+    ( aggregate
+    , containingValues
+    , cosWorksProperly
+    , endpointsString
+    , expectContainedIn
+    , expectDistinct
+    , expectValueIn
+    , fuzzer
+    , hull
+    , intersection
+    , intersectsAndIntersectionAreConsistent
+    , sinWorksProperly
+    )
 
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer)
 import Interval exposing (Interval)
-import Interval.Decode as Decode
-import Interval.Encode as Encode
-import Json.Decode as Decode
 import Test exposing (Test)
 
 
-fuzzer : Fuzzer Interval
+fuzzer : Fuzzer (Interval Float)
 fuzzer =
     let
         endpoint =
@@ -18,16 +28,16 @@ fuzzer =
     Fuzz.map2 Interval.from endpoint endpoint
 
 
-endpointsString : Interval -> String
+endpointsString : Interval Float -> String
 endpointsString interval =
     let
         ( minValue, maxValue ) =
             Interval.endpoints interval
     in
-    "[" ++ toString minValue ++ "," ++ toString maxValue ++ "]"
+    "[" ++ String.fromFloat minValue ++ "," ++ String.fromFloat maxValue ++ "]"
 
 
-expectValueIn : Interval -> Float -> Expectation
+expectValueIn : Interval Float -> Float -> Expectation
 expectValueIn interval value =
     let
         ( minValue, maxValue ) =
@@ -38,23 +48,13 @@ expectValueIn interval value =
     in
     if minValue - tolerance <= value && value <= maxValue + tolerance then
         Expect.pass
+
     else
         Expect.fail
-            (toString value
+            (String.fromFloat value
                 ++ " is not contained in the interval "
                 ++ endpointsString interval
             )
-
-
-jsonRoundTrips : Test
-jsonRoundTrips =
-    Test.fuzz fuzzer
-        "JSON conversion round-trips properly"
-        (\interval ->
-            Encode.interval interval
-                |> Decode.decodeValue Decode.interval
-                |> Expect.equal (Ok interval)
-        )
 
 
 sinWorksProperly : Test
@@ -98,7 +98,8 @@ containingValues =
                         |> Expect.all
                             (List.map
                                 (\value ->
-                                    \interval -> expectValueIn interval value
+                                    \theInterval ->
+                                        value |> expectValueIn theInterval
                                 )
                                 values
                             )
@@ -134,13 +135,14 @@ hull =
         ]
 
 
-expectDistinct : Interval -> Interval -> Expectation
+expectDistinct : Interval Float -> Interval Float -> Expectation
 expectDistinct firstInterval secondInterval =
     if
         (Interval.minValue firstInterval > Interval.maxValue secondInterval)
             || (Interval.maxValue firstInterval < Interval.minValue secondInterval)
     then
         Expect.pass
+
     else
         Expect.fail <|
             "Intervals "
@@ -171,10 +173,11 @@ intersection =
         )
 
 
-expectContainedIn : Interval -> Interval -> Expectation
+expectContainedIn : Interval Float -> Interval Float -> Expectation
 expectContainedIn firstInterval secondInterval =
     if Interval.isContainedIn firstInterval secondInterval then
         Expect.pass
+
     else
         Expect.fail <|
             "Interval "
@@ -194,10 +197,10 @@ aggregate =
                         |> Expect.all
                             (List.map
                                 (\interval ->
-                                    \aggregateInterval ->
+                                    \theAggregateInterval ->
                                         interval
                                             |> expectContainedIn
-                                                aggregateInterval
+                                                theAggregateInterval
                                 )
                                 intervals
                             )
@@ -218,8 +221,8 @@ intersectsAndIntersectionAreConsistent =
                 intersects =
                     Interval.intersects firstInterval secondInterval
 
-                intersection =
+                maybeIntersection =
                     Interval.intersection firstInterval secondInterval
             in
-            intersects |> Expect.equal (intersection /= Nothing)
+            intersects |> Expect.equal (maybeIntersection /= Nothing)
         )
