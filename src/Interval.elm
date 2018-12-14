@@ -1,25 +1,11 @@
-module Interval
-    exposing
-        ( Interval
-        , aggregate
-        , containingValues
-        , contains
-        , cos
-        , endpoints
-        , from
-        , fromEndpoints
-        , hull
-        , interpolate
-        , intersection
-        , intersects
-        , isContainedIn
-        , maxValue
-        , midpoint
-        , minValue
-        , sin
-        , singleton
-        , width
-        )
+module Interval exposing
+    ( Interval
+    , singleton, fromEndpoints, from, containingValues, aggregate, hull, intersection
+    , endpoints, minValue, maxValue, midpoint, width
+    , interpolate
+    , sin, cos
+    , contains, intersects, isContainedIn
+    )
 
 {-|
 
