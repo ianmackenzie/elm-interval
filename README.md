@@ -1,3 +1,5 @@
+# elm-interval
+
 This package implements a simple `Interval` type for [Elm](http://elm-lang.org).
 Both `Int` and `Float` intervals are supported, for example:
 
