@@ -42,7 +42,8 @@ import Float.Extra as Float
 
 
 {-| Represents a finite, bounded interval with a minimum and maximum value, for
-example the interval from 3 to 5.
+example the interval from 3 to 5. An `Interval Int` represents a range of
+integers and an `Interval Float` represents a range of floating-point values.
 -}
 type Interval number
     = Interval ( number, number )

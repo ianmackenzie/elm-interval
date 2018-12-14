@@ -1,4 +1,16 @@
 This package implements a simple `Interval` type for [Elm](http://elm-lang.org).
+Both `Int` and `Float` intervals are supported, for example:
+
+```elm
+rgbRange : Interval Int
+rgbRange =
+    Interval.from 0 255
+
+angleRange : Interval Float
+angleRange =
+    Interval.from 0 (2 * pi)
+```
+
 Various functionality is included for constructing intervals (including as the
 hull or intersection of other intervals), checking for
 overlap/intersection/containment, and performing limited arithmetic on
