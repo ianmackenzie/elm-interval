@@ -273,8 +273,8 @@ maxValue interval =
 
 {-| Get the midpoint of an interval.
 
-    Interval.midpoint (Interval.from 1 5)
-    --> 3
+    Interval.midpoint (Interval.from 1 4)
+    --> 2.5
 
 -}
 midpoint : Interval Float -> Float
