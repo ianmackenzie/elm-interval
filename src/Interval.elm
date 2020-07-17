@@ -1,10 +1,14 @@
 module Interval exposing
     ( Interval
-    , singleton, fromEndpoints, from, containingValues, aggregate, hull, intersection
+    , from, fromEndpoints, singleton
+    , union, intersection
+    , hull, hull3, hullN, hullOf, hullOfN
+    , aggregate, aggregate3, aggregateN, aggregateOf, aggregateOfN
     , endpoints, minValue, maxValue, midpoint, width
-    , interpolate
-    , sin, cos
-    , contains, intersects, isContainedIn
+    , contains, isContainedIn, intersects
+    , interpolate, interpolationParameter
+    , negate, add, subtract, multiplyBy, divideBy, half, twice
+    , plus, minus, sin, cos
     )
 
 {-|
@@ -14,7 +18,28 @@ module Interval exposing
 
 # Constructors
 
-@docs singleton, fromEndpoints, from, containingValues, aggregate, hull, intersection
+@docs from, fromEndpoints, singleton
+
+
+## Booleans
+
+@docs union, intersection
+
+
+## Hull
+
+These functions let you construct an `Interval` containing one or more input
+numbers.
+
+@docs hull, hull3, hullN, hullOf, hullOfN
+
+
+## Aggregation
+
+These functions let you 'aggregate' one or more intervals into a single larger
+interval that contains all of them.
+
+@docs aggregate, aggregate3, aggregateN, aggregateOf, aggregateOfN
 
 
 # Properties
@@ -22,19 +47,23 @@ module Interval exposing
 @docs endpoints, minValue, maxValue, midpoint, width
 
 
+# Queries
+
+@docs contains, isContainedIn, intersects
+
+
 # Interpolation
 
-@docs interpolate
+@docs interpolate, interpolationParameter
 
 
 # Arithmetic
 
-@docs sin, cos
+These functions let you do math with `Interval` values, following the rules of
+[interval arithmetic](https://en.wikipedia.org/wiki/Interval_arithmetic).
 
-
-# Queries
-
-@docs contains, intersects, isContainedIn
+@docs negate, add, subtract, multiplyBy, divideBy, half, twice
+@docs plus, minus, sin, cos
 
 -}
 
@@ -119,22 +148,137 @@ from firstValue secondValue =
         Interval ( secondValue, firstValue )
 
 
-{-| Construct an interval containing all values in the given list. If the list
-is empty, returns `Nothing`.
+{-| Find the interval containing one or more input values:
 
-    Interval.containingValues [ 2, 1, 3 ]
+    Interval.hull 5 [ 3, 2, 4 ]
+    --> Interval.from 2 5
+
+Often ends up being used within a `case` expression:
+
+    case values of
+        [] ->
+            -- some default behavior
+
+        first :: rest ->
+            let
+                interval =
+                    Interval.hull first rest
+            in
+            -- normal behavior using 'interval'
+
+See also [`hullN`](#hullN).
+
+-}
+hull : number -> List number -> Interval number
+hull first rest =
+    hullHelp first first rest
+
+
+hullHelp : number -> number -> List number -> Interval number
+hullHelp a b values =
+    case values of
+        value :: rest ->
+            hullHelp (min a value) (max b value) rest
+
+        [] ->
+            Interval ( a, b )
+
+
+{-| Construct an interval containing the three given values;
+
+    Interval.hull3 a b c
+
+is equivalent to
+
+    Interval.hull a [ b, c ]
+
+but is more efficient. (If you're looking for a `hull2` function, [`from`](#from)
+should do what you want.)
+
+-}
+hull3 : number -> number -> number -> Interval number
+hull3 a b c =
+    Interval ( min a (min b c), max a (max b c) )
+
+
+{-| Construct an interval containing all _N_ values in the given list. If the
+list is empty, returns `Nothing`. If you know you have at least one value, you
+can use [`hull`](#hull) instead.
+
+    Interval.hullN [ 2, 1, 3 ]
     --> Just (Interval.from 1 3)
 
-    Interval.containingValues [ -3 ]
+    Interval.hullN [ -3 ]
     --> Just (Interval.singleton -3)
 
-    Interval.containingValues []
+    Interval.hullN []
     --> Nothing
 
 -}
-containingValues : List number -> Maybe (Interval number)
-containingValues values =
-    Maybe.map2 from (List.minimum values) (List.maximum values)
+hullN : List number -> Maybe (Interval number)
+hullN values =
+    case values of
+        first :: rest ->
+            Just (hull first rest)
+
+        [] ->
+            Nothing
+
+
+{-| Like [`hull`](#hull), but lets you work on any kind of item as long as a
+number can be extracted from it. For example, if you had
+
+    type alias Person =
+        { name : String
+        , age : Float
+        }
+
+then given some people you could find their range of ages as an `Interval`
+using
+
+    Interval.hullOf .age
+        firstPerson
+        [ secondPerson
+        , thirdPerson
+        , fourthPerson
+        ]
+
+See also [`hullOfN`](#hullOfN).
+
+-}
+hullOf : (a -> number) -> a -> List a -> Interval number
+hullOf getValue first rest =
+    let
+        firstValue =
+            getValue first
+    in
+    hullOfHelp firstValue firstValue getValue rest
+
+
+hullOfHelp : number -> number -> (a -> number) -> List a -> Interval number
+hullOfHelp a b getValue list =
+    case list of
+        first :: rest ->
+            let
+                value =
+                    getValue first
+            in
+            hullOfHelp (min a value) (max b value) getValue rest
+
+        [] ->
+            Interval ( a, b )
+
+
+{-| Combination of [`hullOf`](#hullOf) and [`hullN`](#hullN).
+-}
+hullOfN : (a -> number) -> List a -> Maybe (Interval number)
+hullOfN getValue items =
+    case items of
+        first :: rest ->
+            Just (hullOf getValue first rest)
+
+        [] ->
+            Nothing
 
 
 {-| Construct an interval containing both of the given intervals.
@@ -145,20 +289,18 @@ containingValues values =
     secondInterval =
         Interval.from 3 6
 
-    Interval.hull firstInterval secondInterval
+    Interval.union firstInterval secondInterval
     --> Interval.from 1 6
 
--}
-hull : Interval number -> Interval number -> Interval number
-hull firstInterval secondInterval =
-    let
-        ( min1, max1 ) =
-            endpoints firstInterval
+(Note that this is not strictly speaking a 'union' in the precise mathematical
+sense, since the result will contain values that are _in between_ the two given
+intervals and not actually _in_ either of them if those two intervals do not
+overlap.)
 
-        ( min2, max2 ) =
-            endpoints secondInterval
-    in
-    Interval ( min min1 min2, max max1 max2 )
+-}
+union : Interval number -> Interval number -> Interval number
+union (Interval ( a1, b1 )) (Interval ( a2, b2 )) =
+    Interval ( min a1 a2, max b1 b2 )
 
 
 {-| Attempt to construct an interval containing all the values common to both
@@ -183,45 +325,116 @@ If the two intervals just touch, a singleton interval will be returned:
 
 -}
 intersection : Interval number -> Interval number -> Maybe (Interval number)
-intersection firstInterval secondInterval =
+intersection (Interval ( a1, b1 )) (Interval ( a2, b2 )) =
     let
-        ( min1, max1 ) =
-            endpoints firstInterval
+        maxA =
+            max a1 a2
 
-        ( min2, max2 ) =
-            endpoints secondInterval
-
-        maxOfMins =
-            max min1 min2
-
-        minOfMaxes =
-            min max1 max2
+        minB =
+            min b1 b2
     in
-    if maxOfMins <= minOfMaxes then
-        Just (Interval ( maxOfMins, minOfMaxes ))
+    if maxA <= minB then
+        Just (Interval ( maxA, minB ))
 
     else
         Nothing
 
 
-{-| Construct an interval containing all of the intervals in the given list. If
-the list is empty, returns `Nothing`.
+{-| Construct an interval containing one or more given intervals:
 
     Interval.aggregate
-        [ Interval.singleton 2
-        , Interval.from 3 4
+        (Interval.singleton 2)
+        [ Interval.singleton 4
+        , Interval.singleton 3
         ]
-    --> Just (Interval.from 2 4)
+    --> Interval.from 2 4
 
-    Interval.aggregate []
-    --> Nothing
+Works much like [`hull`](#hull). See also [`aggregateN`](#aggregateN).
 
 -}
-aggregate : List (Interval number) -> Maybe (Interval number)
-aggregate intervals =
+aggregate : Interval number -> List (Interval number) -> Interval number
+aggregate (Interval ( a, b )) rest =
+    aggregateHelp a b rest
+
+
+aggregateHelp : number -> number -> List (Interval number) -> Interval number
+aggregateHelp a b intervals =
+    case intervals of
+        (Interval ( c, d )) :: rest ->
+            aggregateHelp (min a c) (max b d) rest
+
+        [] ->
+            Interval ( a, b )
+
+
+{-| Special case of [`aggregate`](#aggregate) for the case of three intervals;
+
+    Interval.aggregate3 first second third
+
+is equivalent to
+
+    Interval.aggregate first [ second, third ]
+
+but is more efficient. (If you're looking for an `aggregate2` function,
+[`union`](#union) should do what you want.)
+
+-}
+aggregate3 :
+    Interval number
+    -> Interval number
+    -> Interval number
+    -> Interval number
+aggregate3 (Interval ( a1, b1 )) (Interval ( a2, b2 )) (Interval ( a3, b3 )) =
+    Interval ( min a1 (min a2 a3), max b1 (max b2 b3) )
+
+
+{-| Construct an interval containing all of the intervals in the given list. If
+the list is empty, returns `Nothing`. If you know you have at least one
+interval, you can use [`aggregate`](#aggregate) instead.
+-}
+aggregateN : List (Interval number) -> Maybe (Interval number)
+aggregateN intervals =
     case intervals of
         first :: rest ->
-            Just (List.foldl hull first rest)
+            Just (aggregate first rest)
+
+        [] ->
+            Nothing
+
+
+{-| Like [`aggregate`](#aggregate), but lets you work on any kind of item as
+long as an interval can be generated from it (similar to [`hullOf`](#hullOf)).
+-}
+aggregateOf : (a -> Interval number) -> a -> List a -> Interval number
+aggregateOf getInterval first rest =
+    let
+        (Interval ( a, b )) =
+            getInterval first
+    in
+    aggregateOfHelp a b getInterval rest
+
+
+aggregateOfHelp : number -> number -> (a -> Interval number) -> List a -> Interval number
+aggregateOfHelp a b getInterval items =
+    case items of
+        first :: rest ->
+            let
+                (Interval ( c, d )) =
+                    getInterval first
+            in
+            aggregateOfHelp (min a c) (max b d) getInterval rest
+
+        [] ->
+            Interval ( a, b )
+
+
+{-| Combination of [`aggregateOf`](#aggregateOf) and [`aggregateN`](#aggregateN).
+-}
+aggregateOfN : (a -> Interval number) -> List a -> Maybe (Interval number)
+aggregateOfN getInterval items =
+    case items of
+        first :: rest ->
+            Just (aggregateOf getInterval first rest)
 
         [] ->
             Nothing
@@ -256,8 +469,8 @@ endpoints (Interval intervalEndpoints) =
 
 -}
 minValue : Interval number -> number
-minValue interval =
-    Tuple.first (endpoints interval)
+minValue (Interval ( a, _ )) =
+    a
 
 
 {-| Get the maximum value of an interval.
@@ -267,8 +480,8 @@ minValue interval =
 
 -}
 maxValue : Interval number -> number
-maxValue interval =
-    Tuple.second (endpoints interval)
+maxValue (Interval ( _, b )) =
+    b
 
 
 {-| Get the midpoint of an interval.
@@ -278,12 +491,8 @@ maxValue interval =
 
 -}
 midpoint : Interval Float -> Float
-midpoint interval =
-    let
-        ( intervalMinValue, intervalMaxValue ) =
-            endpoints interval
-    in
-    intervalMinValue + 0.5 * (intervalMaxValue - intervalMinValue)
+midpoint (Interval ( a, b )) =
+    a + 0.5 * (b - a)
 
 
 {-| Get the width of an interval.
@@ -293,12 +502,8 @@ midpoint interval =
 
 -}
 width : Interval number -> number
-width interval =
-    let
-        ( intervalMinValue, intervalMaxValue ) =
-            endpoints interval
-    in
-    intervalMaxValue - intervalMinValue
+width (Interval ( a, b )) =
+    b - a
 
 
 {-| Interpolate between an interval's endpoints; a value of 0.0 corresponds to
@@ -324,33 +529,52 @@ _not_ "from the first `Interval.from` argument to the second":
     Interval.interpolate (Interval.from 10 0) 0.2
     --> 2 -- not 8!
 
+If you want the interpolate from one number down to another, you can use
+[`Float.Extra.interpolateFrom`](https://package.elm-lang.org/packages/ianmackenzie/elm-float-extra/latest/Float-Extra#interpolateFrom)
+from the `elm-float-extra` package.
+
 -}
 interpolate : Interval Float -> Float -> Float
-interpolate interval t =
-    let
-        ( intervalMinValue, intervalMaxValue ) =
-            endpoints interval
-    in
-    Float.interpolateFrom intervalMinValue intervalMaxValue t
+interpolate (Interval ( a, b )) t =
+    Float.interpolateFrom a b t
 
 
-parameter : Interval Float -> Float -> Float
-parameter interval value =
-    let
-        ( intervalMinValue, intervalMaxValue ) =
-            endpoints interval
-    in
-    if intervalMinValue < intervalMaxValue then
-        (value - intervalMinValue) / (intervalMaxValue - intervalMinValue)
+{-| Given an interval and a given value, determine the corresponding
+interpolation parameter (the parameter that you would pass to [`interpolate`](#interpolate)
+to get the given value):
 
-    else if value < intervalMinValue then
+    Interval.interpolationParameter
+        (Interval.from 10 15)
+        12
+    --> 0.4
+
+The result will be between 0 and 1 if (and only if) the given value is within
+the given interval:
+
+    Interval.interpolationParameter
+        (Interval.from 10 15)
+        18
+    --> 1.6
+
+    Interval.interpolationParameter
+        (Interval.from 10 15)
+        9
+    --> -0.2
+
+-}
+interpolationParameter : Interval Float -> Float -> Float
+interpolationParameter (Interval ( a, b )) value =
+    if a < b then
+        (value - a) / (b - a)
+
+    else if value < a then
         -1 / 0
 
-    else if value > intervalMaxValue then
+    else if value > b then
         1 / 0
 
     else
-        -- value, intervalMinValue and intervalMaxValue are all equal
+        -- value, a and intervalMaxValue are all equal
         0
 
 
@@ -370,12 +594,8 @@ the interval:
 
 -}
 contains : number -> Interval number -> Bool
-contains value interval =
-    let
-        ( intervalMinValue, intervalMaxValue ) =
-            endpoints interval
-    in
-    intervalMinValue <= value && value <= intervalMaxValue
+contains value (Interval ( a, b )) =
+    a <= value && value <= b
 
 
 {-| Check if two intervals touch or overlap (have any values in common).
@@ -398,15 +618,8 @@ intersection of two just-touching intervals):
 
 -}
 intersects : Interval number -> Interval number -> Bool
-intersects firstInterval secondInterval =
-    let
-        ( min1, max1 ) =
-            endpoints firstInterval
-
-        ( min2, max2 ) =
-            endpoints secondInterval
-    in
-    min1 <= max2 && max1 >= min2
+intersects (Interval ( a1, b1 )) (Interval ( a2, b2 )) =
+    a1 <= b2 && b1 >= a2
 
 
 {-| Check if the second interval is fully contained in the first.
@@ -428,49 +641,141 @@ example would be written as:
 
 -}
 isContainedIn : Interval number -> Interval number -> Bool
-isContainedIn firstInterval secondInterval =
-    let
-        ( min1, max1 ) =
-            endpoints firstInterval
-
-        ( min2, max2 ) =
-            endpoints secondInterval
-    in
-    min1 <= min2 && max2 <= max1
+isContainedIn (Interval ( a1, b1 )) (Interval ( a2, b2 )) =
+    a1 <= a2 && b2 <= b1
 
 
 {-| Check if the interval is a singleton (the minimum and maximum values are the
 same).
 
-    Interval.isSingleton (Interval.fromEndpoints ( 2, 2 ))
+    Interval.isSingleton (Interval.from 2 2)
     --> True
 
-    Interval.isSingleton (Interval.fromEndpoints ( 2, 3 ))
+    Interval.isSingleton (Interval.from 2 3)
     --> False
 
 -}
 isSingleton : Interval number -> Bool
-isSingleton interval =
-    let
-        ( intervalMinValue, intervalMaxValue ) =
-            endpoints interval
-    in
-    intervalMinValue == intervalMaxValue
+isSingleton (Interval ( a, b )) =
+    a == b
+
+
+{-| Negate an interval. Note that this will flip the order of the endpoints.
+
+    Interval.negate (Interval.from 2 3)
+    --> Interval.from -3 -2
+
+-}
+negate : Interval number -> Interval number
+negate (Interval ( a, b )) =
+    Interval ( -b, -a )
 
 
 {-| Add the given amount to both endpoints of the given interval.
 
-    Interval.shiftBy 3 (Interval.from -1 5)
+    Interval.from -1 5 |> Interval.add 3
     --> Interval.from 2 8
 
 -}
-shiftBy : number -> Interval number -> Interval number
-shiftBy delta interval =
-    let
-        ( intervalMinValue, intervalMaxValue ) =
-            endpoints interval
-    in
-    Interval ( intervalMinValue + delta, intervalMaxValue + delta )
+add : number -> Interval number -> Interval number
+add delta (Interval ( a, b )) =
+    Interval ( a + delta, b + delta )
+
+
+{-| Subtract the given amount from both endpoints of the given interval.
+
+    Interval.from -1 5 |> Interval.subtract 3
+    --> Interval.from -4 2
+
+-}
+subtract : number -> Interval number -> Interval number
+subtract delta (Interval ( a, b )) =
+    Interval ( a - delta, b - delta )
+
+
+{-| Multiply an interval by a given value. Note that this will flip the order
+of the interval's endpoints if the given value is negative.
+
+    Interval.multiplyBy 5 (Interval.from 2 3)
+    --> Interval.from 10 15
+
+    Interval.multiplyBy -2 (Interval.from 2 3)
+    --> Interval.from -6 -4
+
+-}
+multiplyBy : number -> Interval number -> Interval number
+multiplyBy scale (Interval ( a, b )) =
+    if scale >= 0 then
+        Interval ( a * scale, b * scale )
+
+    else
+        Interval ( b * scale, a * scale )
+
+
+{-| Divide an interval by a given value.
+
+    Interval.divideBy 2 (Interval.from 2 3)
+    --> Interval.from 1 1.5
+
+    Interval.divideBy -2 (Interval.from 2 3)
+    --> Interval.from -1.5 -1
+
+-}
+divideBy : Float -> Interval Float -> Interval Float
+divideBy divisor (Interval ( a, b )) =
+    if divisor == 0 then
+        Interval ( -1 / 0, 1 / 0 )
+
+    else if divisor > 0 then
+        Interval ( a / divisor, b / divisor )
+
+    else
+        Interval ( b / divisor, a / divisor )
+
+
+{-| Shorthand for `multiplyBy 0.5`.
+-}
+half : Interval Float -> Interval Float
+half (Interval ( a, b )) =
+    Interval ( 0.5 * a, 0.5 * b )
+
+
+{-| Shorthand for `multiplyBy 2`.
+-}
+twice : Interval number -> Interval number
+twice (Interval ( a, b )) =
+    Interval ( 2 * a, 2 * b )
+
+
+{-| Add two intervals together.
+
+    Interval.from 5 10
+        |> Interval.plus (Interval.from 2 3)
+    --> Interval.from 7 13
+
+-}
+plus : Interval number -> Interval number -> Interval number
+plus (Interval ( a2, b2 )) (Interval ( a1, b1 )) =
+    Interval ( a2 + a1, b2 + b2 )
+
+
+{-| Subtract the first interval from the second. This means that `minus` makes
+the most sense when using `|>`:
+
+    Interval.from 5 10
+        |> Interval.minus (Interval.from 2 3)
+    --> Interval.from 2 8
+
+Without the pipe operator, the above would be written as:
+
+    Interval.minus (Interval.from 2 3)
+        (Interval.from 5 10)
+    --> Interval.from 2 8
+
+-}
+minus : Interval number -> Interval number -> Interval number
+minus (Interval ( a2, b2 )) (Interval ( a1, b1 )) =
+    Interval ( a1 - b2, b1 - a2 )
 
 
 {-| Get the image of sin(x) applied on the interval.
@@ -492,7 +797,7 @@ sin interval =
             ( includesMin, includesMax ) =
                 sinIncludesMinMax interval
 
-            ( intervalMinValue, intervalMaxValue ) =
+            ( a, b ) =
                 endpoints interval
 
             newMin =
@@ -500,16 +805,14 @@ sin interval =
                     -1
 
                 else
-                    min (Basics.sin intervalMinValue)
-                        (Basics.sin intervalMaxValue)
+                    min (Basics.sin a) (Basics.sin b)
 
             newMax =
                 if includesMax then
                     1
 
                 else
-                    max (Basics.sin intervalMinValue)
-                        (Basics.sin intervalMaxValue)
+                    max (Basics.sin a) (Basics.sin b)
         in
         fromEndpoints ( newMin, newMax )
 
@@ -533,7 +836,7 @@ cos interval =
             ( includesMin, includesMax ) =
                 cosIncludesMinMax interval
 
-            ( intervalMinValue, intervalMaxValue ) =
+            ( a, b ) =
                 endpoints interval
 
             newMin =
@@ -541,16 +844,14 @@ cos interval =
                     -1
 
                 else
-                    min (Basics.cos intervalMinValue)
-                        (Basics.cos intervalMaxValue)
+                    min (Basics.cos a) (Basics.cos b)
 
             newMax =
                 if includesMax then
                     1
 
                 else
-                    max (Basics.cos intervalMinValue)
-                        (Basics.cos intervalMaxValue)
+                    max (Basics.cos a) (Basics.cos b)
         in
         fromEndpoints ( newMin, newMax )
 
@@ -561,7 +862,7 @@ accordingly.
 -}
 sinIncludesMinMax : Interval Float -> ( Bool, Bool )
 sinIncludesMinMax interval =
-    interval |> shiftBy (-pi / 2) |> cosIncludesMinMax
+    interval |> subtract (pi / 2) |> cosIncludesMinMax
 
 
 {-| cos(x + pi) = -cos(x), therefore if cos(interval + pi) includes the maximum,
@@ -569,7 +870,7 @@ that means cos(interval) includes the minimum.
 -}
 cosIncludesMinMax : Interval Float -> ( Bool, Bool )
 cosIncludesMinMax interval =
-    ( interval |> shiftBy pi |> cosIncludesMax
+    ( interval |> add pi |> cosIncludesMax
     , interval |> cosIncludesMax
     )
 
@@ -580,15 +881,12 @@ If `minValue` and `maxValue` are in different branches
 2 pi \* k, which means the interval must include the maximum value.
 -}
 cosIncludesMax : Interval Float -> Bool
-cosIncludesMax interval =
+cosIncludesMax (Interval ( a, b )) =
     let
-        ( intervalMinValue, intervalMaxValue ) =
-            endpoints interval
-
         minBranch =
-            floor <| intervalMinValue / (2 * pi)
+            floor (a / (2 * pi))
 
         maxBranch =
-            floor <| intervalMaxValue / (2 * pi)
+            floor (b / (2 * pi))
     in
     minBranch /= maxBranch

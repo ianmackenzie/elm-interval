@@ -1,16 +1,16 @@
 module Tests exposing
-    ( aggregate
-    , containingValues
+    ( aggregateN
     , cosWorksProperly
     , endpointsString
     , expectContainedIn
     , expectDistinct
     , expectValueIn
     , fuzzer
-    , hull
+    , hullN
     , intersection
     , intersectsAndIntersectionAreConsistent
     , sinWorksProperly
+    , union
     )
 
 import Expect exposing (Expectation)
@@ -87,12 +87,12 @@ cosWorksProperly =
         )
 
 
-containingValues : Test
-containingValues =
+hullN : Test
+hullN =
     Test.fuzz (Fuzz.list Fuzz.float)
         "containing"
         (\values ->
-            case Interval.containingValues values of
+            case Interval.hullN values of
                 Just interval ->
                     interval
                         |> Expect.all
@@ -109,28 +109,28 @@ containingValues =
         )
 
 
-hull : Test
-hull =
-    Test.describe "hull"
+union : Test
+union =
+    Test.describe "union"
         [ Test.fuzz3
             fuzzer
             fuzzer
             (Fuzz.floatRange 0 1)
-            "Value in first interval is in hull"
+            "Value in first interval is in union"
             (\firstInterval secondInterval t ->
                 Interval.interpolate firstInterval t
                     |> expectValueIn
-                        (Interval.hull firstInterval secondInterval)
+                        (Interval.union firstInterval secondInterval)
             )
         , Test.fuzz3
             fuzzer
             fuzzer
             (Fuzz.floatRange 0 1)
-            "Value in second interval is in hull"
+            "Value in second interval is in union"
             (\firstInterval secondInterval t ->
                 Interval.interpolate secondInterval t
                     |> expectValueIn
-                        (Interval.hull firstInterval secondInterval)
+                        (Interval.union firstInterval secondInterval)
             )
         ]
 
@@ -186,12 +186,12 @@ expectContainedIn firstInterval secondInterval =
                 ++ endpointsString firstInterval
 
 
-aggregate : Test
-aggregate =
+aggregateN : Test
+aggregateN =
     Test.fuzz (Fuzz.list fuzzer)
-        "aggregate"
+        "aggregateN"
         (\intervals ->
-            case Interval.aggregate intervals of
+            case Interval.aggregateN intervals of
                 Just aggregateInterval ->
                     aggregateInterval
                         |> Expect.all
