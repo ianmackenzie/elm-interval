@@ -90,7 +90,7 @@ cosWorksProperly =
 hullN : Test
 hullN =
     Test.fuzz (Fuzz.list Fuzz.float)
-        "containing"
+        "hullN"
         (\values ->
             case Interval.hullN values of
                 Just interval ->
