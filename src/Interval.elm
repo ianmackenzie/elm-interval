@@ -2,8 +2,8 @@ module Interval exposing
     ( Interval
     , from, fromEndpoints, singleton
     , union, intersection
-    , hull, hull3, hullN, hullOf, hullOfN
-    , aggregate, aggregate3, aggregateN, aggregateOf, aggregateOfN
+    , hull, hullN, hullOf, hullOfN, hull3
+    , aggregate, aggregateN, aggregateOf, aggregateOfN, aggregate3
     , endpoints, minValue, maxValue, midpoint, width
     , contains, isContainedIn, intersects, isSingleton
     , interpolate, interpolationParameter
@@ -31,7 +31,7 @@ module Interval exposing
 These functions let you construct an `Interval` containing one or more input
 numbers.
 
-@docs hull, hull3, hullN, hullOf, hullOfN
+@docs hull, hullN, hullOf, hullOfN, hull3
 
 
 ## Aggregation
@@ -39,7 +39,7 @@ numbers.
 These functions let you 'aggregate' one or more intervals into a single larger
 interval that contains all of them.
 
-@docs aggregate, aggregate3, aggregateN, aggregateOf, aggregateOfN
+@docs aggregate, aggregateN, aggregateOf, aggregateOfN, aggregate3
 
 
 # Properties
