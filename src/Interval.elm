@@ -201,9 +201,9 @@ hull3 a b c =
     Interval ( min a (min b c), max a (max b c) )
 
 
-{-| Construct an interval containing all _N_ values in the given list. If the
-list is empty, returns `Nothing`. If you know you have at least one value, you
-can use [`hull`](#hull) instead.
+{-| Attempt to construct an interval containing all _N_ values in the given
+list. If the list is empty, returns `Nothing`. If you know you have at least one
+value, you can use [`hull`](#hull) instead.
 
     Interval.hullN [ 2, 1, 3 ]
     --> Just (Interval.from 1 3)
@@ -388,8 +388,8 @@ aggregate3 (Interval ( a1, b1 )) (Interval ( a2, b2 )) (Interval ( a3, b3 )) =
     Interval ( min a1 (min a2 a3), max b1 (max b2 b3) )
 
 
-{-| Construct an interval containing all of the intervals in the given list. If
-the list is empty, returns `Nothing`. If you know you have at least one
+{-| Attemp to construct an interval containing all of the intervals in the given
+list. If the list is empty, returns `Nothing`. If you know you have at least one
 interval, you can use [`aggregate`](#aggregate) instead.
 -}
 aggregateN : List (Interval number) -> Maybe (Interval number)
@@ -506,22 +506,25 @@ width (Interval ( a, b )) =
     b - a
 
 
-{-| Interpolate between an interval's endpoints; a value of 0.0 corresponds to
-the minimum value of the interval, a value of 0.5 corresponds to its midpoint
-and a value of 1.0 corresponds to its maximum value. Values less than 0.0 or
-greater than 1.0 can be used to extrapolate.
+{-| Interpolate between an interval's endpoints based on a parameter value that
+will generally be between 0.0 and 1.0. A value of 0.0 corresponds to the minimum
+value of the interval, a value of 0.5 corresponds to its midpoint and a value of
+1.0 corresponds to its maximum value:
 
-    Interval.interpolate (Interval.from -1 5) 0
-    --> -1
+    Interval.interpolate (Interval.from 1 5) 0
+    --> 1
 
-    Interval.interpolate (Interval.from -1 5) 0.75
-    --> 3.5
+    Interval.interpolate (Interval.from 1 5) 0.75
+    --> 4
 
-    Interval.interpolate (Interval.from -1 5) -0.5
-    --> -4
+Values less than 0.0 or greater than 1.0 can be used to extrapolate:
 
-Note that the interpolation is in fact from the minimum value to the maximum,
-_not_ "from the first `Interval.from` argument to the second":
+    Interval.interpolate (Interval.from 1 5) 1.5
+    --> 7
+
+Note that because of how [`Interval.from`](#from) works, the interpolation is in
+fact from the minimum value to the maximum, _not_ "from the first
+`Interval.from` argument to the second":
 
     Interval.interpolate (Interval.from 0 10) 0.2
     --> 2
@@ -560,6 +563,13 @@ the given interval:
         (Interval.from 10 15)
         9
     --> -0.2
+
+This is the inverse of `interpolate`; for any non-zero-width `interval`,
+
+    Interval.interpolationParameter interval value
+        |> Interval.interpolate interval
+
+should be equal to the original `value` (within numerical roundoff).
 
 -}
 interpolationParameter : Interval Float -> Float -> Float
@@ -671,7 +681,7 @@ negate (Interval ( a, b )) =
     Interval ( -b, -a )
 
 
-{-| Add the given amount to both endpoints of the given interval.
+{-| Add the given amount to an interval.
 
     Interval.from -1 5 |> Interval.add 3
     --> Interval.from 2 8
@@ -682,7 +692,7 @@ add delta (Interval ( a, b )) =
     Interval ( a + delta, b + delta )
 
 
-{-| Subtract the given amount from both endpoints of the given interval.
+{-| Subtract the given amount from an interval.
 
     Interval.from -1 5 |> Interval.subtract 3
     --> Interval.from -4 2
@@ -712,7 +722,8 @@ multiplyBy scale (Interval ( a, b )) =
         Interval ( b * scale, a * scale )
 
 
-{-| Divide an interval by a given value.
+{-| Divide an interval by a given value. Note that this will flip the order
+of the interval's endpoints if the given value is negative.
 
     Interval.divideBy 2 (Interval.from 2 3)
     --> Interval.from 1 1.5
