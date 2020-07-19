@@ -7,6 +7,7 @@ module Tests exposing
     , expectValueIn
     , fuzzer
     , hullN
+    , interpolateAndInterpolationParameterAreInverses
     , intersection
     , intersectsAndIntersectionAreConsistent
     , sinWorksProperly
@@ -225,4 +226,37 @@ intersectsAndIntersectionAreConsistent =
                     Interval.intersection firstInterval secondInterval
             in
             intersects |> Expect.equal (maybeIntersection /= Nothing)
+        )
+
+
+interpolateAndInterpolationParameterAreInverses : Test
+interpolateAndInterpolationParameterAreInverses =
+    Test.fuzz2
+        fuzzer
+        (Fuzz.floatRange -20 20)
+        "interpolate and interpolationParameter are inverses"
+        (\interval value ->
+            let
+                interpolationParameter =
+                    Interval.interpolationParameter interval value
+            in
+            if Interval.isSingleton interval then
+                let
+                    singletonValue =
+                        Interval.minValue interval
+                in
+                if value < singletonValue then
+                    Expect.true "interpolation parameter should be negative infinity"
+                        (isInfinite interpolationParameter && interpolationParameter < 0)
+
+                else if value > singletonValue then
+                    Expect.true "interpolation parameter should be positive infinity"
+                        (isInfinite interpolationParameter && interpolationParameter > 0)
+
+                else
+                    interpolationParameter |> Expect.within (Expect.Absolute 0) 0
+
+            else
+                Interval.interpolate interval interpolationParameter
+                    |> Expect.within (Expect.Absolute 1.0e-12) value
         )
