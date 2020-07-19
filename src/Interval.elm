@@ -5,7 +5,7 @@ module Interval exposing
     , hull, hull3, hullN, hullOf, hullOfN
     , aggregate, aggregate3, aggregateN, aggregateOf, aggregateOfN
     , endpoints, minValue, maxValue, midpoint, width
-    , contains, isContainedIn, intersects
+    , contains, isContainedIn, intersects, isSingleton
     , interpolate, interpolationParameter
     , negate, add, subtract, multiplyBy, divideBy, half, twice
     , plus, minus, sin, cos
@@ -49,7 +49,7 @@ interval that contains all of them.
 
 # Queries
 
-@docs contains, isContainedIn, intersects
+@docs contains, isContainedIn, intersects, isSingleton
 
 
 # Interpolation
