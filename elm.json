@@ -3,7 +3,7 @@
     "name": "ianmackenzie/elm-interval",
     "summary": "Simple Interval type for Elm",
     "license": "MPL-2.0",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "exposed-modules": [
         "Interval"
     ],
