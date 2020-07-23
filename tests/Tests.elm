@@ -10,6 +10,8 @@ module Tests exposing
     , interpolateAndInterpolationParameterAreInverses
     , intersection
     , intersectsAndIntersectionAreConsistent
+    , minus
+    , plus
     , sinWorksProperly
     , union
     )
@@ -259,4 +261,44 @@ interpolateAndInterpolationParameterAreInverses =
             else
                 Interval.interpolate interval interpolationParameter
                     |> Expect.within (Expect.Absolute 1.0e-12) value
+        )
+
+
+plus : Test
+plus =
+    Test.fuzz2
+        (Fuzz.map2 Tuple.pair fuzzer (Fuzz.floatRange 0 1))
+        (Fuzz.map2 Tuple.pair fuzzer (Fuzz.floatRange 0 1))
+        "plus works as expected"
+        (\( firstInterval, t ) ( secondInterval, u ) ->
+            let
+                valueInFirstInterval =
+                    Interval.interpolate firstInterval t
+
+                valueInSecondInterval =
+                    Interval.interpolate secondInterval u
+            in
+            (valueInFirstInterval + valueInSecondInterval)
+                |> expectValueIn
+                    (firstInterval |> Interval.plus secondInterval)
+        )
+
+
+minus : Test
+minus =
+    Test.fuzz2
+        (Fuzz.map2 Tuple.pair fuzzer (Fuzz.floatRange 0 1))
+        (Fuzz.map2 Tuple.pair fuzzer (Fuzz.floatRange 0 1))
+        "minus works as expected"
+        (\( firstInterval, t ) ( secondInterval, u ) ->
+            let
+                valueInFirstInterval =
+                    Interval.interpolate firstInterval t
+
+                valueInSecondInterval =
+                    Interval.interpolate secondInterval u
+            in
+            (valueInFirstInterval - valueInSecondInterval)
+                |> expectValueIn
+                    (firstInterval |> Interval.minus secondInterval)
         )
