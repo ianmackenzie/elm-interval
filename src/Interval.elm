@@ -767,7 +767,7 @@ twice (Interval ( a, b )) =
 -}
 plus : Interval number -> Interval number -> Interval number
 plus (Interval ( a2, b2 )) (Interval ( a1, b1 )) =
-    Interval ( a2 + a1, b2 + b2 )
+    Interval ( a2 + a1, b2 + b1 )
 
 
 {-| Subtract the first interval from the second. This means that `minus` makes
