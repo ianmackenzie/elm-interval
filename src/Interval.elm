@@ -8,7 +8,7 @@ module Interval exposing
     , contains, isContainedIn, intersects, isSingleton
     , interpolate, interpolationParameter
     , negate, add, subtract, multiplyBy, divideBy, half, twice
-    , plus, minus, sin, cos
+    , plus, minus, times, sin, cos
     )
 
 {-|
@@ -63,7 +63,7 @@ These functions let you do math with `Interval` values, following the rules of
 [interval arithmetic](https://en.wikipedia.org/wiki/Interval_arithmetic).
 
 @docs negate, add, subtract, multiplyBy, divideBy, half, twice
-@docs plus, minus, sin, cos
+@docs plus, minus, times, sin, cos
 
 -}
 
@@ -787,6 +787,35 @@ Without the pipe operator, the above would be written as:
 minus : Interval number -> Interval number -> Interval number
 minus (Interval ( a2, b2 )) (Interval ( a1, b1 )) =
     Interval ( a1 - b2, b1 - a2 )
+
+
+{-| Multiply the two given intervals.
+
+    Interval.from 10 12
+        |> Interval.times
+            (Interval.from 5 6)
+    --> Interval.from 50 72
+
+-}
+times : Interval number -> Interval number -> Interval number
+times (Interval ( a2, b2 )) (Interval ( a1, b1 )) =
+    let
+        aa =
+            a1 * a2
+
+        ab =
+            a1 * b2
+
+        ba =
+            b1 * a2
+
+        bb =
+            b1 * b2
+    in
+    Interval
+        ( min (min (min aa ab) ba) bb
+        , max (max (max aa ab) ba) bb
+        )
 
 
 {-| Get the image of sin(x) applied on the interval.

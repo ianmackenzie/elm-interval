@@ -13,6 +13,7 @@ module Tests exposing
     , minus
     , plus
     , sinWorksProperly
+    , times
     , union
     )
 
@@ -301,4 +302,24 @@ minus =
             (valueInFirstInterval - valueInSecondInterval)
                 |> expectValueIn
                     (firstInterval |> Interval.minus secondInterval)
+        )
+
+
+times : Test
+times =
+    Test.fuzz2
+        (Fuzz.map2 Tuple.pair fuzzer (Fuzz.floatRange 0 1))
+        (Fuzz.map2 Tuple.pair fuzzer (Fuzz.floatRange 0 1))
+        "times works as expected"
+        (\( firstInterval, t ) ( secondInterval, u ) ->
+            let
+                valueInFirstInterval =
+                    Interval.interpolate firstInterval t
+
+                valueInSecondInterval =
+                    Interval.interpolate secondInterval u
+            in
+            (valueInFirstInterval * valueInSecondInterval)
+                |> expectValueIn
+                    (firstInterval |> Interval.times secondInterval)
         )
